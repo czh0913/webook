@@ -2,7 +2,6 @@ import React from 'react';
 import { Button, Form, Input } from 'antd';
 import axios from "@/axios/axios";
 import Link from "next/link";
-import router from "next/router";
 
 const onFinish = (values: any) => {
     axios.post("/users/signup", values)
@@ -11,16 +10,7 @@ const onFinish = (values: any) => {
                 alert(res.statusText);
                 return
             }
-            if(typeof res.data == 'string') {
-                alert(res.data);
-            } else {
-                const msg = res.data?.msg || JSON.stringify(res.data)
-                alert(msg);
-                if(res.data.code == 0) {
-                    router.push('/users/login')
-                }
-            }
-
+           alert(res.data);
         }).catch((err) => {
             alert(err);
     })

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail
-	ErrUserNotFound       = dao.ErrUserNotFound
+	ErrDuplicateEmail = dao.ErrDuplicateEmail
+	ErrUserNotFound   = dao.ErrRecordNotFound
 )
 
 type UserRepository struct {
@@ -21,32 +21,25 @@ func NewUserRepository(dao *dao.UserDAO) *UserRepository {
 	}
 }
 
-func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	return r.dao.Insert(ctx, dao.User{
+func (repo *UserRepository) Create(ctx context.Context, u domain.User) error {
+	return repo.dao.Insert(ctx, dao.User{
 		Email:    u.Email,
 		Password: u.Password,
 	})
-	//在这操作缓存
 }
 
-func (r *UserRepository) FindByEmail(ctx context.Context, u domain.User) (domain.User, error) {
-	user, err := r.dao.FindByEmail(ctx, dao.User{
-		Id:       u.Id,
-		Email:    u.Email,
-		Password: u.Password,
-	})
+func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+	u, err := repo.dao.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, err
 	}
-	return domain.User{
-		Id:       user.Id,
-		Email:    user.Email,
-		Password: user.Password,
-	}, err
+	return repo.toDomain(u), nil
 }
 
-func (r *UserRepository) FindById(int64) {
-	//先从 cache 里面找
-	//再从 dao 里面找
-	//找到了回写 cache
+func (repo *UserRepository) toDomain(u dao.User) domain.User {
+	return domain.User{
+		Id:       u.Id,
+		Email:    u.Email,
+		Password: u.Password,
+	}
 }

@@ -3,11 +3,10 @@
 package config
 
 var Config = config{
-	// 本地连接
 	DB: DBConfig{
-		DSN: "root:root@tcp(webook-mysql:3306)/webook",
+		DSN: "root:root@tcp(webook-record-mysql:3308)/webook",
 	},
 	Redis: RedisConfig{
-		Addr: "webook-redis:11479",
+		Addr: "webook-record-redis:6379",
 	},
 }

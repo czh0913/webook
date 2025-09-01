@@ -2,12 +2,23 @@ package domain
 
 import "time"
 
-// User 领域对象， 是DDD中的 entity
-// 有人叫 BO (business object)
 type User struct {
 	Id       int64
 	Email    string
 	Password string
 
+	// UTC 0 的时区
 	Ctime time.Time
+
+	//Addr Address
 }
+
+//type Address struct {
+//	Province string
+//	Region   string
+//}
+
+//func (u User) ValidateEmail() bool {
+// 在这里用正则表达式校验
+//return u.Email
+//}

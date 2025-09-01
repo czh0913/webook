@@ -2,7 +2,7 @@ import axios from "axios";
 import router from "next/router";
 const instance = axios.create({
     // 这边记得修改你对应的配置文件
-    baseURL:  "http://localhost:80",
+    baseURL:  "http://localhost:8080",
     withCredentials: true
 })
 
@@ -17,18 +17,18 @@ instance.interceptors.response.use(function (resp) {
     if (newRefreshToken) {
         localStorage.setItem("refresh_token", newRefreshToken)
     }
-    if (resp.status == 401) {
-        window.location.href="/users/login"
-    }
+    // if (resp.status == 401) {
+    //     window.location.href="/users/login"
+    // }
     return resp
 }, (err) => {
     console.log(err)
-    if (err.response.status == 401) {
-        window.location.href="/users/login"
-    }
+    // if (err.response.status == 401) {
+    //     window.location.href="/users/login"
+    // }
     return err
 })
-
+//
 // 在这里让每一个请求都加上 authorization 的头部
 instance.interceptors.request.use((req) => {
     const token = localStorage.getItem("token")
