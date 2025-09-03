@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository"
-
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,7 +15,8 @@ var (
 )
 
 type UserService struct {
-	repo *repository.UserRepository
+	repo  *repository.UserRepository
+	redis *redis.Client
 }
 
 func NewUserService(repo *repository.UserRepository) *UserService {
@@ -30,6 +31,7 @@ func (svc *UserService) Signup(ctx context.Context, u domain.User) error {
 		return err
 	}
 	u.Password = string(hash)
+
 	return svc.repo.Create(ctx, u)
 }
 
@@ -47,4 +49,10 @@ func (svc *UserService) Login(ctx context.Context, email string, password string
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 	return u, nil
+
+}
+
+func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
+	u, err := svc.repo.FindById(ctx, id)
+	return u, err
 }

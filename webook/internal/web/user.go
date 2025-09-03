@@ -46,6 +46,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/edit", h.Edit)
 	// GET /users/profile
 	ug.GET("/profile", h.Profile)
+	println("注册了 /users/signup, /users/login, /users/profile 路由")
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -116,7 +117,7 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 			UserAgent: ctx.GetHeader("User-Agent"),
 			RegisteredClaims: jwt.RegisteredClaims{
 				// 1 分钟过期
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
 			},
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)

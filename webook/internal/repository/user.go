@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
+	"github.com/czh0913/gocode/basic-go/webook/internal/repository/cache"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository/dao"
 )
 
@@ -12,12 +13,14 @@ var (
 )
 
 type UserRepository struct {
-	dao *dao.UserDAO
+	dao   *dao.UserDAO
+	cache *cache.UserCache
 }
 
-func NewUserRepository(dao *dao.UserDAO) *UserRepository {
+func NewUserRepository(dao *dao.UserDAO, ca *cache.UserCache) *UserRepository {
 	return &UserRepository{
-		dao: dao,
+		dao:   dao,
+		cache: ca,
 	}
 }
 
@@ -42,4 +45,29 @@ func (repo *UserRepository) toDomain(u dao.User) domain.User {
 		Email:    u.Email,
 		Password: u.Password,
 	}
+}
+
+func (repo *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+	//先从cache找 再从dao找找到了回写cache
+	u, err := repo.cache.Get(ctx, id)
+	if err == nil {
+		return u, nil
+	}
+	//没有找到
+
+	us, err := repo.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+	u = repo.toDomain(us)
+
+	go func() {
+		err = repo.cache.Set(ctx, u)
+		if err != nil {
+			
+		}
+
+	}()
+
+	return u, err
 }

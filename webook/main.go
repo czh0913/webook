@@ -7,12 +7,10 @@ import (
 	"github.com/czh0913/gocode/basic-go/webook/internal/service"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web/middleware"
-	"github.com/czh0913/gocode/basic-go/webook/pkg/ginx/middlewares/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"net/http"
@@ -21,17 +19,18 @@ import (
 )
 
 func main() {
-	//db := initDB()
-	//
-	//server := initWebServer()
-	//initUserHdl(db, server)
-	////server := gin.Default()
+	db := initDB()
 
-	server := gin.Default()
+	server := initWebServer()
+	initUserHdl(db, server)
+	//server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "hello，启动成功了！")
 	})
-	server.Run(":8080")
+
+	//server.Run(":8080")
+
+	server.Run("0.0.0.0:8080")
 }
 
 func initUserHdl(db *gorm.DB, server *gin.Engine) {
@@ -80,12 +79,12 @@ func initWebServer() *gin.Engine {
 		println("这是我的 Middleware")
 	})
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: config.Config.Redis.Addr,
-	})
-
-	server.Use(ratelimit.NewBuilder(redisClient,
-		time.Second, 1).Build())
+	//redisClient := redis.NewClient(&redis.Options{
+	//	Addr: config.Config.Redis.Addr,
+	//})
+	//
+	//server.Use(ratelimit.NewBuilder(redisClient,
+	//	time.Second, 1).Build())
 
 	useJWT(server)
 	//useSession(server)

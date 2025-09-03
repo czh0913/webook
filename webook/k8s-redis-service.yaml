@@ -7,9 +7,11 @@ spec:
     app: webook-redis
   ports:
     - protocol: TCP
+#     集群内端口比如webook程序要访问redis
       port: 11479
-#      Redis 默认端口
+#      Redis 默认端口 Redis 服务监听的端口要与 Deployment 中的 containerPort 保持一致，连接 Redis 服务时使用这个端口
       targetPort: 6379
+#     集群外端口比如本地机器要访问redis 使用redis-cli 通过这个端口访问
       nodePort: 30003
   type: NodePort
   
