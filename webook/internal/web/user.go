@@ -15,6 +15,11 @@ const (
 	emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 	// 和上面比起来，用 ` 看起来就比较清爽
 	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	biz                  = "login"
+)
+
+var (
+	ErrCodeSendTooMany = service.ErrCodeSendTooMany
 )
 
 type UserHandler struct {
@@ -55,21 +60,17 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 }
 
 func (h *UserHandler) LoginSMS(ctx *gin.Context) {
-
-}
-
-func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
-	const biz = "login"
 	type Req struct {
-		Phone string
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
 	}
-
 	var req Req
 
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
-	err := h.codeSvc.Send(ctx, biz, req.Phone)
+
+	ok, err := h.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			code: 5,
@@ -77,10 +78,56 @@ func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 		})
 		return
 	}
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			code: 4,
+			Msg:  "验证码错误",
+		})
+		return
+	}
 
 	ctx.JSON(http.StatusOK, Result{
-		Msg: "发送成功",
+		Msg: "验证码校验成功",
 	})
+
+}
+
+func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
+
+	type Req struct {
+		Phone string `json:"phone"`
+	}
+
+	var req Req
+
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	if req.Phone == "" {
+		ctx.JSON(http.StatusOK, Result{
+			code: 4,
+			Msg:  "输入错误",
+		})
+		return
+	}
+	err := h.codeSvc.Send(ctx, biz, req.Phone)
+
+	switch err {
+	case nil:
+		ctx.JSON(http.StatusOK, Result{
+			Msg: "发送成功",
+		})
+	case ErrCodeSendTooMany:
+		ctx.JSON(http.StatusOK, Result{
+			Msg: "发送太频繁，请稍后再试",
+		})
+	default:
+		ctx.JSON(http.StatusOK, Result{
+			code: 5,
+			Msg:  "系统错误",
+		})
+	}
+
 	return
 }
 

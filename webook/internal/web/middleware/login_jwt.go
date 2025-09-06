@@ -24,7 +24,7 @@ func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
 		if ctx.Request.URL.Path == "/users/login" ||
 			ctx.Request.URL.Path == "/users/signup" ||
 			ctx.Request.URL.Path == "/users/login_sms/code/send" ||
-			ctx.Request.URL.Path == "/users/login_sms/code" {
+			ctx.Request.URL.Path == "/users/login_sms" {
 			ctx.Next()
 			return
 		}
