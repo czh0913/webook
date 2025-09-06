@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,8 +14,7 @@ var (
 )
 
 type UserService struct {
-	repo  *repository.UserRepository
-	redis *redis.Client
+	repo *repository.UserRepository
 }
 
 func NewUserService(repo *repository.UserRepository) *UserService {

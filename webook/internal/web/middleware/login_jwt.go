@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/gob"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -13,66 +14,80 @@ import (
 type LoginJWTMiddlewareBuilder struct {
 }
 
-func (m *LoginJWTMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
+func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{}
+}
+
+func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
+	gob.Register(time.Now())
 	return func(ctx *gin.Context) {
-		path := ctx.Request.URL.Path
-		if path == "/users/signup" || path == "/users/login" {
-			// 不需要登录校验
+		if ctx.Request.URL.Path == "/users/login" ||
+			ctx.Request.URL.Path == "/users/signup" ||
+			ctx.Request.URL.Path == "/users/login_sms/code/send" ||
+			ctx.Request.URL.Path == "/users/login_sms/code" {
+			ctx.Next()
 			return
 		}
-		// 根据约定，token 在 Authorization 头部
-		// Bearer XXXX
-		authCode := ctx.GetHeader("Authorization")
-		if authCode == "" {
-			// 没登录，没有 token, Authorization 这个头部都没有
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+
+		// 我现在用 JWT 来校验
+
+		tokenHeader := ctx.GetHeader("Authorization")
+
+		if tokenHeader == "" {
+			// 没有登录过
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
-		segs := strings.Split(authCode, " ")
+
+		segs := strings.Split(tokenHeader, " ")
 		if len(segs) != 2 {
-			// 没登录，Authorization 中的内容是乱传的
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+			// 没登陆
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
 			return
 		}
+
 		tokenStr := segs[1]
-		var uc web.UserClaims
-		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
-			return web.JWTKey, nil
+		// ParseWithClaims 里面会修改把解析了之后的数据赋值给 claims ，会修改claims 需要传指针
+
+		claims := &web.UserClaims{}
+
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte("kGokUbI4xPzYsQ33OFmtV3tQ66MypaN0"), nil
 		})
+
 		if err != nil {
-			// token 不对，token 是伪造的
+			// 没登陆
 			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-		if token == nil || !token.Valid {
-			// token 解析出来了，但是 token 可能是非法的，或者过期了的
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+
 			return
 		}
 
-		if uc.UserAgent != ctx.GetHeader("User-Agent") {
-			// 后期我们讲到了监控告警的时候，这个地方要埋点
-			// 能够进来这个分支的，大概率是攻击者
+		if !token.Valid || token == nil || claims.Uid == 0 {
+			// 没登陆
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+		// 在确认 calims 存在之后
+		if claims.UserAgent != ctx.Request.UserAgent() {
+			// 用户代理不匹配，可能是 CSRF 攻击
+			// 需要加监控
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user agent"})
+			return
+		}
 
-		expireTime := uc.ExpiresAt
-		// 不判定都可以
-		//if expireTime.Before(time.Now()) {
-		//	ctx.AbortWithStatus(http.StatusUnauthorized)
-		//	return
-		//}
-		// 剩余过期时间 < 50s 就要刷新
-		if expireTime.Sub(time.Now()) < time.Second*50 {
-			uc.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 5))
-			tokenStr, err = token.SignedString(web.JWTKey)
-			ctx.Header("x-jwt-token", tokenStr)
+		now := time.Now()
+
+		if claims.ExpiresAt.Sub(now) < time.Second*50 {
+			claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Minute))
+			tokenStr, err = token.SignedString([]byte("kGokUbI4xPzYsQ33OFmtV3tQ66MypaN0"))
 			if err != nil {
-				// 这边不要中断，因为仅仅是过期时间没有刷新，但是用户是登录了的
-				log.Println(err)
+				// 记录日志 生成token 失败
+				log.Println(" jwt 续约失败", err)
 			}
+			//println("续约 JWT token")
+			ctx.Header("x-jwt-token", tokenStr)
 		}
-		ctx.Set("user", uc)
+
+		ctx.Set("claims", claims)
 	}
 }

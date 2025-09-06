@@ -11,6 +11,11 @@ import (
 
 var ErrRedisNotFound = redis.Nil
 
+/*
+A用到了 B，B 一定是接口 =>这个是保证面向接口
+A用到了 B，B 一定是 A 的字段 =>规避包变量、包方法，都非常缺乏扩展性
+A用到了 B，A 绝对不初始化 B，而是外面注入 =>保持依赖注入(DI，Dependency Injection能据举例子这个是什么意思么我看不懂
+*/
 type UserCache struct {
 	client     redis.Cmdable
 	expiration time.Duration

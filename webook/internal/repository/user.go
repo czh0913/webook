@@ -64,7 +64,7 @@ func (repo *UserRepository) FindById(ctx context.Context, id int64) (domain.User
 	go func() {
 		err = repo.cache.Set(ctx, u)
 		if err != nil {
-			
+
 		}
 
 	}()
