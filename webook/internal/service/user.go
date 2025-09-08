@@ -68,6 +68,6 @@ func (svc *UserService) FindOrCreat(ctx context.Context, phone string) (domain.U
 	if err != nil && err != repository.ErrDuplicate {
 		return u, err
 	}
-	//会有主从延迟问题
+	
 	return svc.repo.FindByPhone(ctx, phone)
 }
