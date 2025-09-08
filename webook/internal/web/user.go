@@ -86,6 +86,31 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 		return
 	}
 
+	user, err := h.svc.FindOrCreat(ctx, req.Phone)
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			code: 5,
+			Msg:  "系统错误",
+		})
+		return
+	}
+	if user.Id == 0 {
+		ctx.JSON(http.StatusOK, Result{
+			code: 5,
+			Msg:  "系统错误",
+		})
+		return
+	}
+
+	err = h.setJWTToken(ctx, user.Id)
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			code: 5,
+			Msg:  "系统错误",
+		})
+	}
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "验证码校验成功",
 	})
@@ -194,26 +219,33 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	u, err := h.svc.Login(ctx, req.Email, req.Password)
 	switch err {
 	case nil:
-		uc := UserClaims{
-			Uid:       u.Id,
-			UserAgent: ctx.GetHeader("User-Agent"),
-			RegisteredClaims: jwt.RegisteredClaims{
-				// 1 分钟过期
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
-			},
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
-		tokenStr, err := token.SignedString(JWTKey)
-		if err != nil {
-			ctx.String(http.StatusOK, "系统错误")
-		}
-		ctx.Header("x-jwt-token", tokenStr)
+		h.setJWTToken(ctx, u.Id)
 		ctx.String(http.StatusOK, "登录成功")
 	case service.ErrInvalidUserOrPassword:
 		ctx.String(http.StatusOK, "用户名或者密码不对")
 	default:
 		ctx.String(http.StatusOK, "系统错误")
 	}
+}
+
+func (h *UserHandler) setJWTToken(ctx *gin.Context, uid int64) error {
+	uc := UserClaims{
+		Uid:       uid,
+		UserAgent: ctx.GetHeader("User-Agent"),
+		RegisteredClaims: jwt.RegisteredClaims{
+			// 1 分钟过期
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
+	tokenStr, err := token.SignedString(JWTKey)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return err
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+
+	return nil
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {

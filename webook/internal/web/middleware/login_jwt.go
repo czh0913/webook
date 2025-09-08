@@ -52,7 +52,7 @@ func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
 		claims := &web.UserClaims{}
 
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte("kGokUbI4xPzYsQ33OFmtV3tQ66MypaN0"), nil
+			return web.JWTKey, nil
 		})
 
 		if err != nil {
@@ -79,7 +79,7 @@ func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
 
 		if claims.ExpiresAt.Sub(now) < time.Second*50 {
 			claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Minute))
-			tokenStr, err = token.SignedString([]byte("kGokUbI4xPzYsQ33OFmtV3tQ66MypaN0"))
+			tokenStr, err = token.SignedString(web.JWTKey)
 			if err != nil {
 				// 记录日志 生成token 失败
 				log.Println(" jwt 续约失败", err)
