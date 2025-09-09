@@ -8,7 +8,7 @@ import (
 type Service struct {
 }
 
-func NewSMSService() *Service {
+func NewService() *Service {
 	return &Service{}
 }
 

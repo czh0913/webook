@@ -68,6 +68,6 @@ func (svc *UserService) FindOrCreat(ctx context.Context, phone string) (domain.U
 	if err != nil && err != repository.ErrDuplicate {
 		return u, err
 	}
-	
+
 	return svc.repo.FindByPhone(ctx, phone)
 }
