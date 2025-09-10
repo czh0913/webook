@@ -16,6 +16,7 @@ const (
 	// 和上面比起来，用 ` 看起来就比较清爽
 	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 	biz                  = "login"
+	userIdKey            = "userId"
 )
 
 var (
@@ -25,11 +26,11 @@ var (
 type UserHandler struct {
 	emailRexExp    *regexp.Regexp
 	passwordRexExp *regexp.Regexp
-	codeSvc        *service.CodeService
-	svc            *service.UserService
+	codeSvc        service.CodeService
+	svc            service.UserService
 }
 
-func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
@@ -283,10 +284,22 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	// 嵌入一段刷新过期时间的代码
 }
 
-func (h *UserHandler) Profile(ctx *gin.Context) {
-	//us := ctx.MustGet("user").(UserClaims)
-	ctx.String(http.StatusOK, "这是 profile")
-	// 嵌入一段刷新过期时间的代码
+func (c *UserHandler) Profile(ctx *gin.Context) {
+	type Profile struct {
+		Email string
+	}
+	sess := sessions.Default(ctx)
+	id := sess.Get(userIdKey).(int64)
+	u, err := c.svc.Profile(ctx, id)
+	if err != nil {
+		// 按照道理来说，这边 id 对应的数据肯定存在，所以要是没找到，
+		// 那就说明是系统出了问题。
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.JSON(http.StatusOK, Profile{
+		Email: u.Email,
+	})
 }
 
 var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")
