@@ -6,6 +6,7 @@ import (
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository/cache"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository/dao"
+	"time"
 )
 
 var (
@@ -66,16 +67,16 @@ func (repo *CacheUserRepository) FindById(ctx context.Context, id int64) (domain
 	}
 	u = repo.entityToDomain(us)
 	err = repo.cache.Set(ctx, u)
-	
-	if err != nil {
 
-	}
+	//if err != nil {
+	//
+	//}
 	//go func() {
 	//
 	//
 	//}()
 
-	return u, err
+	return u, nil
 }
 
 func (repo *CacheUserRepository) entityToDomain(u dao.User) domain.User {
@@ -84,6 +85,7 @@ func (repo *CacheUserRepository) entityToDomain(u dao.User) domain.User {
 		Email:    u.Email.String,
 		Password: u.Password,
 		Phone:    u.Phone.String,
+		Ctime:    time.UnixMilli(u.Ctime),
 	}
 }
 
