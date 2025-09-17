@@ -63,7 +63,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 	type Req struct {
 		Phone string `json:"phone"`
-		Code  string `json:"code"`
+		Code  string `json:"Code"`
 	}
 	var req Req
 
@@ -74,14 +74,14 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 	ok, err := h.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
-			code: 5,
+			Code: 5,
 			Msg:  "系统错误",
 		})
 		return
 	}
 	if !ok {
 		ctx.JSON(http.StatusOK, Result{
-			code: 4,
+			Code: 4,
 			Msg:  "验证码错误",
 		})
 		return
@@ -91,14 +91,14 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
-			code: 5,
+			Code: 5,
 			Msg:  "系统错误",
 		})
 		return
 	}
 	if user.Id == 0 {
 		ctx.JSON(http.StatusOK, Result{
-			code: 5,
+			Code: 5,
 			Msg:  "系统错误",
 		})
 		return
@@ -108,7 +108,7 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
-			code: 5,
+			Code: 5,
 			Msg:  "系统错误",
 		})
 	}
@@ -131,7 +131,7 @@ func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 	}
 	if req.Phone == "" {
 		ctx.JSON(http.StatusOK, Result{
-			code: 4,
+			Code: 4,
 			Msg:  "输入错误",
 		})
 		return
@@ -149,7 +149,7 @@ func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 		})
 	default:
 		ctx.JSON(http.StatusOK, Result{
-			code: 5,
+			Code: 5,
 			Msg:  "系统错误",
 		})
 	}

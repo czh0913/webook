@@ -1,7 +1,7 @@
 package web
 
 type Result struct {
-	code int    `json:"code"`
+	Code int    `json:"Code"`
 	Msg  string `json:"msg"`
 	Data any    `json:"data"`
 }
