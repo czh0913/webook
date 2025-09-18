@@ -3,7 +3,6 @@ package ioc
 import (
 	"github.com/czh0913/gocode/basic-go/webook/internal/web"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web/middleware"
-	"github.com/czh0913/gocode/basic-go/webook/pkg/ginx/middlewares/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -23,7 +22,7 @@ func InitMiddlewwares(redisCllient redis.Cmdable) []gin.HandlerFunc {
 		corsHdl(),
 		middleware.NewLoginJWTMiddlewareBuilder().JwtBuild(),
 
-		ratelimit.NewBuilder(redisCllient, time.Second, 100).Build(),
+		//ratelimit.NewBuilder(redisCllient, time.Second, 100).Build(),
 	}
 }
 
