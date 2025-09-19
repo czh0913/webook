@@ -26,12 +26,12 @@ func NewService(client *sms.Client, appId string, signName string, limiter ratel
 	}
 }
 
-func (s Service) Send(ctx context.Context, tpl string, args []string, numbers ...string) error {
+func (s Service) Send(ctx context.Context, biz string, args []string, numbers ...string) error {
 
 	req := sms.NewSendSmsRequest()
 	req.SmsSdkAppId = s.appId
 	req.SignName = s.signName
-	req.TemplateId = ekit.ToPtr[string](tpl)
+	req.TemplateId = ekit.ToPtr[string](biz)
 	req.PhoneNumberSet = s.toStringPtrSlice(numbers)
 
 	req.TemplateParamSet = s.toStringPtrSlice(args)
