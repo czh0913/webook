@@ -7,9 +7,11 @@ import (
 type User struct {
 	Id int64
 	// sql.NullString 可以为nil的数据库变量类型
-	Email    string
-	Password string
-	Phone    string
+	Email      string
+	Password   string
+	Phone      string
+	WeChatInfo WeChatInfo
+
 	// UTC 0 的时区
 	Ctime time.Time
 

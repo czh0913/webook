@@ -15,26 +15,26 @@ import (
 
 func InitWebServer() *gin.Engine {
 	wire.Build(
-		ioc.InitDB, ioc.InitRedis,
+		// 提供 wechat.Service
+		ioc.InitWeChatService,
 
+		// 提供依赖 wechat.Service 的 Handler
+		web.NewOAuth2WeChatHandler, // 更新为正确的名称
+
+		// 其他依赖项
+		ioc.InitDB,
+		ioc.InitRedis,
 		dao.NewUserDAO,
-
 		cache.NewUserCache,
 		cache.NewCacheCode,
-
 		repository.NewCodeRepository,
 		repository.NewUserRepository,
-
 		service.NewCodeService,
 		service.NewUserService,
-
 		ioc.InitSMSService,
-
 		web.NewUserHandler,
-
-		//gin.Default,
 		ioc.InitGin,
-		ioc.InitMiddlewwares,
+		ioc.InitMiddlewares,
 	)
 	return new(gin.Engine)
 }
