@@ -1,12 +1,17 @@
 package web
 
 import (
+	"errors"
+	"fmt"
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
 	"github.com/czh0913/gocode/basic-go/webook/internal/service"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"net/http"
+	"time"
 )
 
 const (
@@ -27,6 +32,7 @@ type UserHandler struct {
 	codeSvc        service.CodeService
 	svc            service.UserService
 	jwtHandler
+	cmd redis.Cmdable
 }
 
 func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
@@ -35,6 +41,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 		svc:            svc,
 		codeSvc:        codeSvc,
+		jwtHandler:     newJWTHandler(),
 	}
 }
 
@@ -57,6 +64,62 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 
 	ug.POST("/login_sms/code/send", h.SendLoginSMSCode)
 	ug.POST("/login_sms", h.LoginSMS)
+
+	ug.POST("/refresh_token", h.RefreshToken)
+}
+
+func (h *UserHandler) LogoutJWT(ctx *gin.Context) {
+	ctx.Header("x-jwt-token", "失效token")
+	ctx.Header("x-refresh-token", "失效token")
+	c, _ := ctx.Get("Claims")
+	claims, ok := c.(*UserClaims)
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	err := h.cmd.Set(ctx, claims.Ssid, "", time.Hour*10*24).Err()
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "退出登录失败",
+		})
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "退出登录成功",
+	})
+
+}
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	tokenStr := ExtractToken(ctx)
+	var rc RefreshClaims
+
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (any, error) {
+		return h.rtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	cnt, err := h.cmd.Exists(ctx, fmt.Sprintf("users:ssid:%s", rc.Ssid)).Result()
+	if err != nil || cnt > 0 {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+
+		return
+	}
+
+	err = h.setJWTToken(ctx, rc.uid, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "刷新成功",
+	})
 }
 
 func (h *UserHandler) LoginSMS(ctx *gin.Context) {
@@ -103,7 +166,7 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 		return
 	}
 
-	err = h.setJWTToken(ctx, user.Id)
+	err = h.setLoginToken(ctx, user.Id)
 
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
@@ -111,6 +174,7 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 			Msg:  "系统错误",
 		})
 	}
+
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "验证码校验成功",
 	})
@@ -137,12 +201,12 @@ func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 	}
 	err := h.codeSvc.Send(ctx, biz, req.Phone)
 
-	switch err {
-	case nil:
+	switch {
+	case err == nil:
 		ctx.JSON(http.StatusOK, Result{
 			Msg: "发送成功",
 		})
-	case ErrCodeSendTooMany:
+	case errors.Is(err, ErrCodeSendTooMany):
 		ctx.JSON(http.StatusOK, Result{
 			Msg: "发送太频繁，请稍后再试",
 		})
@@ -165,6 +229,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 
 	var req SignUpReq
 	if err := ctx.Bind(&req); err != nil {
+		fmt.Println("fsd")
 		return
 	}
 
@@ -197,10 +262,10 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
-	switch err {
-	case nil:
+	switch {
+	case err == nil:
 		ctx.String(http.StatusOK, "注册成功")
-	case service.ErrDuplicateEmail:
+	case errors.Is(err, service.ErrDuplicateEmail):
 		ctx.String(http.StatusOK, "邮箱冲突，请换一个")
 	default:
 		ctx.String(http.StatusOK, "系统错误")
@@ -217,15 +282,27 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 	u, err := h.svc.Login(ctx, req.Email, req.Password)
-	switch err {
-	case nil:
-		h.setJWTToken(ctx, u.Id)
-		ctx.String(http.StatusOK, "登录成功")
-	case service.ErrInvalidUserOrPassword:
-		ctx.String(http.StatusOK, "用户名或者密码不对")
-	default:
-		ctx.String(http.StatusOK, "系统错误")
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidUserOrPassword) {
+			ctx.String(http.StatusOK, "用户名或者密码不对")
+		} else {
+			ctx.String(http.StatusOK, "系统错误")
+		}
+		return
 	}
+
+	err = h.setLoginToken(ctx, u.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "登录成功",
+	})
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {
@@ -238,8 +315,8 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 	u, err := h.svc.Login(ctx, req.Email, req.Password)
-	switch err {
-	case nil:
+	switch {
+	case err == nil:
 		sess := sessions.Default(ctx)
 		sess.Set("userId", u.Id)
 		sess.Options(sessions.Options{
@@ -252,7 +329,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 			return
 		}
 		ctx.String(http.StatusOK, "登录成功")
-	case service.ErrInvalidUserOrPassword:
+	case errors.Is(err, service.ErrInvalidUserOrPassword):
 		ctx.String(http.StatusOK, "用户名或者密码不对")
 	default:
 		ctx.String(http.StatusOK, "系统错误")
@@ -263,13 +340,13 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	// 嵌入一段刷新过期时间的代码
 }
 
-func (c *UserHandler) Profile(ctx *gin.Context) {
+func (h *UserHandler) Profile(ctx *gin.Context) {
 	type Profile struct {
 		Email string
 	}
 	sess := sessions.Default(ctx)
 	id := sess.Get(userIdKey).(int64)
-	u, err := c.svc.Profile(ctx, id)
+	u, err := h.svc.Profile(ctx, id)
 	if err != nil {
 		// 按照道理来说，这边 id 对应的数据肯定存在，所以要是没找到，
 		// 那就说明是系统出了问题。
@@ -280,5 +357,3 @@ func (c *UserHandler) Profile(ctx *gin.Context) {
 		Email: u.Email,
 	})
 }
-
-var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")

@@ -6,6 +6,6 @@ import (
 
 func InitWeChatService() wechat.Service {
 	appId := "key"
-
-	return wechat.NewService(appId)
+	appSecret := ""
+	return wechat.NewService(appId, appSecret)
 }

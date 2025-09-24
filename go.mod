@@ -14,6 +14,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/wire v0.7.0
+	github.com/hashicorp/golang-lru v1.0.2
 	github.com/lithammer/shortuuid/v4 v4.2.0
 	github.com/redis/go-redis/v9 v9.12.0
 	github.com/stretchr/testify v1.10.0

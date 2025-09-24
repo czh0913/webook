@@ -32,7 +32,7 @@ func corsHdl() gin.HandlerFunc {
 		AllowOrigins:  []string{"http://localhost:3000"}, // 前端地址
 		AllowMethods:  []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:  []string{"Content-Type", "Authorization"},
-		ExposeHeaders: []string{"x-jwt-token"}, // 如果你有自定义 header
+		ExposeHeaders: []string{"x-jwt-token", "x-refresh-token"}, // 如果你有自定义 header
 		// 允许带 cookie
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
