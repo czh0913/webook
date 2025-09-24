@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
-	"github.com/lithammer/shortuuid/v4"
 	"net/http"
 
 	"net/url"
@@ -16,8 +15,8 @@ var (
 )
 
 type Service interface {
-	AuthURL(ctx context.Context) (string, error)
-	VerifyCode(ctx context.Context, code string, state string) (domain.WeChatInfo, error)
+	AuthURL(ctx context.Context, state string) (string, error)
+	VerifyCode(ctx context.Context, code string) (domain.WeChatInfo, error)
 }
 
 type service struct {
@@ -33,7 +32,7 @@ func NewService(appId string, appSecret string) Service {
 		client:    http.DefaultClient,
 	}
 }
-func (s service) VerifyCode(ctx context.Context, code string, state string) (domain.WeChatInfo, error) {
+func (s service) VerifyCode(ctx context.Context, code string) (domain.WeChatInfo, error) {
 	const targetPattern = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code"
 	target := fmt.Sprintf(targetPattern, s.appId, s.appSecret, code)
 	//resp, err := http.Get(target)
@@ -66,9 +65,9 @@ func (s service) VerifyCode(ctx context.Context, code string, state string) (dom
 	}, nil
 }
 
-func (s service) AuthURL(ctx context.Context) (string, error) {
+func (s service) AuthURL(ctx context.Context, state string) (string, error) {
 	const urlPattern = "https://open.weixin.qq.com/connect/qrconnect?appid=%s&redirect_uri=%s&response_type=code&scope=snsapi_login&state=%s#wechat_redirect"
-	state := shortuuid.New()
+
 	return fmt.Sprintf(urlPattern, s.appId, redirectURI, state), nil
 }
 

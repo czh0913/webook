@@ -32,7 +32,7 @@ func InitWebServer() *gin.Engine {
 	codeService := service.NewCodeService(codeRepository, smsService)
 	userHandler := web.NewUserHandler(userService, codeService)
 	wechatService := ioc.InitWeChatService()
-	oAuth2WechatHandler := web.NewOAuth2WeChatHandler(wechatService)
+	oAuth2WechatHandler := web.NewOAuth2WeChatHandler(wechatService, userService)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler)
 	return engine
 }
