@@ -2,21 +2,22 @@ package middleware
 
 import (
 	"encoding/gob"
-	"fmt"
-	"github.com/czh0913/gocode/basic-go/webook/internal/web"
+	ijwt "github.com/czh0913/gocode/basic-go/webook/internal/web/jwt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
 	"net/http"
 	"time"
 )
 
 type LoginJWTMiddlewareBuilder struct {
-	cmd redis.Cmdable
+	ijwt.Handler
 }
 
-func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{}
+func NewLoginJWTMiddlewareBuilder(ijwt ijwt.Handler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		Handler: ijwt,
+	}
 }
 
 func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
@@ -35,8 +36,8 @@ func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
 
 		// 我现在用 JWT 来校验
 
-		tokenStr := web.ExtractToken(ctx)
-		claims := &web.UserClaims{}
+		tokenStr := l.ExtractToken(ctx)
+		claims := &ijwt.UserClaims{}
 
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK"), nil
@@ -61,9 +62,8 @@ func (l LoginJWTMiddlewareBuilder) JwtBuild() gin.HandlerFunc {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user agent"})
 			return
 		}
-
-		cnt, err := l.cmd.Exists(ctx, fmt.Sprintf("users:ssid:%s", claims.Ssid)).Result()
-		if err != nil || cnt > 0 {
+		err = l.CheckSession(ctx, claims.Ssid)
+		if err != nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 
 			return

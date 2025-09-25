@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"github.com/czh0913/gocode/basic-go/webook/internal/web"
+	ijwt "github.com/czh0913/gocode/basic-go/webook/internal/web/jwt"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,10 @@ import (
 	"strings"
 	"time"
 )
+
+func InitJWTHandler(cmd redis.Cmdable) ijwt.Handler {
+	return ijwt.NewJWTHandler(cmd)
+}
 
 func InitGin(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WeChatHdl *web.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
@@ -18,10 +23,10 @@ func InitGin(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WeChatHdl *web.
 	return server
 }
 
-func InitMiddlewares(redisCllient redis.Cmdable) []gin.HandlerFunc {
+func InitMiddlewares(redisCllient redis.Cmdable, handler ijwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
-		middleware.NewLoginJWTMiddlewareBuilder().JwtBuild(),
+		middleware.NewLoginJWTMiddlewareBuilder(handler).JwtBuild(),
 
 		//ratelimit.NewBuilder(redisCllient, time.Second, 100).Build(),
 	}
