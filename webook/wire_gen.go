@@ -16,17 +16,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+import (
+	_ "github.com/spf13/viper/remote"
+)
+
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
+	logger := ioc.InitLogger()
 	handler := ioc.InitJWTHandler(cmdable)
-	v := ioc.InitMiddlewares(cmdable, handler)
-	db := ioc.InitDB()
+	v := ioc.InitMiddlewares(cmdable, logger, handler)
+	db := ioc.InitDB(logger)
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
-	userService := service.NewUserService(userRepository)
+	userService := service.NewUserService(userRepository, logger)
 	codeCache := cache.NewCacheCode(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()

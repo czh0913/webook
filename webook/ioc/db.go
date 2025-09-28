@@ -1,13 +1,17 @@
 package ioc
 
 import (
+	"fmt"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository/dao"
+	"github.com/czh0913/gocode/basic-go/webook/pkg/logger"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	glogger "gorm.io/gorm/logger"
+	"time"
 )
 
-func InitDB() *gorm.DB {
+func InitDB(l logger.Logger) *gorm.DB {
 
 	type Config struct {
 		Dsn string `yaml:"dsn"`
@@ -18,10 +22,16 @@ func InitDB() *gorm.DB {
 	}
 	err := viper.UnmarshalKey("db", &cfg)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("初始化配置失败 %v, 原因 %w", cfg, err))
 	}
-
-	db, err := gorm.Open(mysql.Open(cfg.Dsn))
+	db, err := gorm.Open(mysql.Open(cfg.Dsn), &gorm.Config{
+		Logger: glogger.New(gormLoggerFunc(l.Debug), glogger.Config{
+			SlowThreshold:             time.Millisecond * 10,
+			IgnoreRecordNotFoundError: true,
+			LogLevel:                  glogger.Info,
+			ParameterizedQueries:      true,
+		}),
+	})
 	//db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		//只会在初始化过程种 panic
@@ -37,4 +47,13 @@ func InitDB() *gorm.DB {
 	}
 
 	return db
+}
+
+type gormLoggerFunc func(msg string, feilds ...logger.Field)
+
+func (g gormLoggerFunc) Printf(msg string, args ...interface{}) {
+	g(msg, logger.Field{
+		Key:   "args",
+		Value: args,
+	})
 }

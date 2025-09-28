@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -111,6 +112,7 @@ func (h *UserHandler) RefreshToken(ctx *gin.Context) {
 	err = h.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
+		zap.L().Error("设置 JWT token 失败", zap.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{
@@ -135,6 +137,7 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 			Code: 5,
 			Msg:  "系统错误",
 		})
+		zap.L().Error("验证码校验失败", zap.Error(err))
 		return
 	}
 	if !ok {
@@ -203,6 +206,7 @@ func (h *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 			Msg: "发送成功",
 		})
 	case errors.Is(err, ErrCodeSendTooMany):
+		zap.L().Warn("验证码发送频繁", zap.Error(err))
 		ctx.JSON(http.StatusOK, Result{
 			Msg: "发送太频繁，请稍后再试",
 		})

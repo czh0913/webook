@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository"
+	"github.com/czh0913/gocode/basic-go/webook/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,11 +24,13 @@ type UserService interface {
 
 type userService struct {
 	repo repository.UserRepository
+	l    logger.Logger
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
+func NewUserService(repo repository.UserRepository, l logger.Logger) UserService {
 	return &userService{
 		repo: repo,
+		l:    l,
 	}
 }
 
@@ -76,6 +79,8 @@ func (svc *userService) FindOrCreat(ctx context.Context, phone string) (domain.U
 	if err != nil && err != repository.ErrDuplicate {
 		return u, err
 	}
+
+	svc.l.Info("用户不存在，创建用户", logger.String("phone", phone))
 
 	return svc.repo.FindByPhone(ctx, phone)
 }

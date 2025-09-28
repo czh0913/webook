@@ -2,11 +2,10 @@ package cache
 
 import (
 	"context"
-	"errors"
-	"github.com/redis/go-redis/v9"
-
 	_ "embed"
+	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -46,6 +45,7 @@ func (c *RedisCodeCache) Set(ctx context.Context, biz, phone, code string) error
 	case 0:
 		return nil
 	case -1:
+
 		return ErrCodeSendTooMany
 	default:
 		return errors.New("系统错误")

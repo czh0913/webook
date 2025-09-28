@@ -24,7 +24,7 @@ func InitWebServer() *gin.Engine {
 		ioc.InitGin,
 		ioc.InitMiddlewares,
 		ioc.InitJWTHandler,
-
+		ioc.InitLogger,
 		// DAO 层（数据库访问对象）
 		dao.NewUserDAO,
 

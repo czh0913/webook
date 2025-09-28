@@ -1,12 +1,17 @@
 package ioc
 
 import (
+	"context"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web"
 	ijwt "github.com/czh0913/gocode/basic-go/webook/internal/web/jwt"
 	"github.com/czh0913/gocode/basic-go/webook/internal/web/middleware"
+	"github.com/czh0913/gocode/basic-go/webook/internal/web/middleware/logger"
+	logger2 "github.com/czh0913/gocode/basic-go/webook/pkg/logger"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/viper"
 	"strings"
 	"time"
 )
@@ -23,9 +28,21 @@ func InitGin(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WeChatHdl *web.
 	return server
 }
 
-func InitMiddlewares(redisCllient redis.Cmdable, handler ijwt.Handler) []gin.HandlerFunc {
+func InitMiddlewares(redisCllient redis.Cmdable, l logger2.Logger, handler ijwt.Handler) []gin.HandlerFunc {
+	bd := logger.NewBuilder(func(ctx context.Context, al *logger.AccessLog) {
+		l.Debug("请求信息", logger2.Field{
+			Key:   "al",
+			Value: al,
+		})
+	}).AllowRespBody().AllowReqBody(true)
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		bl := viper.GetBool("web.logreq")
+		bd.AllowReqBody(bl)
+	})
+
 	return []gin.HandlerFunc{
 		corsHdl(),
+		bd.Build(),
 		middleware.NewLoginJWTMiddlewareBuilder(handler).JwtBuild(),
 
 		//ratelimit.NewBuilder(redisCllient, time.Second, 100).Build(),
