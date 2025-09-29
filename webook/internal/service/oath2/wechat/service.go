@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/czh0913/gocode/basic-go/webook/pkg/logger"
+
 	"github.com/czh0913/gocode/basic-go/webook/internal/domain"
 	"go.uber.org/zap"
 	"net/http"
@@ -24,13 +26,15 @@ type service struct {
 	appId     string
 	appSecret string
 	client    *http.Client
+	l         logger.Logger
 }
 
-func NewService(appId string, appSecret string) Service {
+func NewService(appId string, appSecret string, l logger.Logger) Service {
 	return &service{
 		appId:     appId,
 		appSecret: appSecret,
 		client:    http.DefaultClient,
+		l:         l,
 	}
 }
 func (s service) VerifyCode(ctx context.Context, code string) (domain.WeChatInfo, error) {

@@ -21,7 +21,7 @@ type RedisJWTHandler struct {
 	cmd redis.Cmdable
 }
 
-func NewJWTHandler(cmd redis.Cmdable) Handler {
+func NewRedisJWTHandler(cmd redis.Cmdable) Handler {
 	return &RedisJWTHandler{
 		cmd: cmd,
 	}

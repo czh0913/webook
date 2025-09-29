@@ -17,13 +17,15 @@ import (
 )
 
 func InitJWTHandler(cmd redis.Cmdable) ijwt.Handler {
-	return ijwt.NewJWTHandler(cmd)
+	return ijwt.NewRedisJWTHandler(cmd)
 }
 
-func InitGin(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WeChatHdl *web.OAuth2WechatHandler) *gin.Engine {
+func InitGin(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WeChatHdl *web.OAuth2WechatHandler,
+	articleHdl *web.ArticleHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
 	hdl.RegisterRoutes(server)
+	articleHdl.RegisterRoutes(server)
 	oauth2WeChatHdl.RegisterRoutes(server)
 	return server
 }
