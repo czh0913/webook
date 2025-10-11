@@ -35,10 +35,12 @@ func InitWebServer() *gin.Engine {
 		// Repository 层（聚合 DAO + Cache）
 		repository.NewCodeRepository,
 		repository.NewUserRepository,
+		// retry.NewArticleReaderRepoRetry,
 
 		// Service 层（业务逻辑）
 		service.NewCodeService,
 		service.NewUserService,
+		// service.NewArticleService,
 
 		// Web 层（接口 Handler）
 		web.NewOAuth2WeChatHandler,
