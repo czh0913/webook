@@ -5,5 +5,5 @@ import (
 )
 
 func InitLog() logger.Logger {
-	return &logger.NoOpLogger{}
+	return &logger.NopLogger{}
 }

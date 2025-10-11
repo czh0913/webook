@@ -4,6 +4,7 @@ package startup
 
 import (
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository"
+	"github.com/czh0913/gocode/basic-go/webook/internal/repository/article"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository/cache"
 	"github.com/czh0913/gocode/basic-go/webook/internal/repository/dao"
 	"github.com/czh0913/gocode/basic-go/webook/internal/service"
@@ -29,7 +30,7 @@ func InitWebServer() *gin.Engine {
 		cache.NewCacheCode,
 		dao.NewGORMArticleDAO,
 		repository.NewCodeRepository,
-		repository.NewCachedArticleRepository,
+		article.NewCachedArticleRepository,
 		// service 部分
 		// 集成测试我们显式指定使用内存实现
 		ioc.InitSMSService,
@@ -58,7 +59,7 @@ func InitWebServer() *gin.Engine {
 
 // 测试用的 ArticleHandler
 func InitArticleHandler() *web.ArticleHandler {
-	wire.Build(thirdProvider, dao.NewGORMArticleDAO, service.NewArticleService, repository.NewCachedArticleRepository, web.NewArticleHandler)
+	wire.Build(thirdProvider, dao.NewGORMArticleDAO, service.NewArticleService, article.NewCachedArticleRepository, web.NewArticleHandler)
 	return &web.ArticleHandler{}
 }
 

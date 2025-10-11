@@ -26,15 +26,51 @@ func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHand
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
 	g.POST("/edit", h.Edit)
+	g.POST("/publish", h.Publish)
+
+}
+
+func (h *ArticleHandler) Publish(ctx *gin.Context) {
+	var req ArticleReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	// ?????
+	c := ctx.MustGet("claims")
+	// 断言 UserClaims 指针
+	claims, ok := c.(*ijwt.UserClaims)
+
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		//ctx.AbortWithStatus(http.StatusUnauthorized)
+		h.l.Error("未发现用户 sessino 信息")
+		return
+	}
+
+	id, err := h.svc.Publish(ctx, req.toDomain(claims.Uid))
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Error("发表帖子失败", logger.Error(err))
+		// 日志
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Msg:  "OK",
+		Data: id,
+	})
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
-	type Req struct {
-		Title   string `json:"title"`
-		Content string `json:"content"`
-	}
 
-	var req Req
+	var req ArticleReq
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
@@ -51,13 +87,7 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 		h.l.Error("未发现用户 sessino 信息")
 		return
 	}
-	id, err := h.svc.Save(ctx, domain.Article{
-		Title:   req.Title,
-		Content: req.Content,
-		Author: domain.Author{
-			Id: claims.Uid,
-		},
-	})
+	id, err := h.svc.Save(ctx, req.toDomain(claims.Uid))
 
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
@@ -72,4 +102,21 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 		Msg:  "OK",
 		Data: id,
 	})
+}
+
+type ArticleReq struct {
+	Id      int64  `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+func (r ArticleReq) toDomain(uid int64) domain.Article {
+	return domain.Article{
+		Id:      r.Id,
+		Title:   r.Title,
+		Content: r.Content,
+		Author: domain.Author{
+			Id: uid,
+		},
+	}
 }

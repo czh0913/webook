@@ -1,19 +1,19 @@
 package logger
 
-type NoOpLogger struct {
+type NopLogger struct {
 }
 
 func NewNoOpLogger() Logger {
-	return &NoOpLogger{}
+	return &NopLogger{}
 }
 
-func (n *NoOpLogger) Debug(msg string, args ...Field) {}
+func (n *NopLogger) Debug(msg string, args ...Field) {}
 
-func (n *NoOpLogger) Info(msg string, args ...Field) {
+func (n *NopLogger) Info(msg string, args ...Field) {
 }
 
-func (n *NoOpLogger) Warn(msg string, args ...Field) {
+func (n *NopLogger) Warn(msg string, args ...Field) {
 }
 
-func (n *NoOpLogger) Error(msg string, args ...Field) {
+func (n *NopLogger) Error(msg string, args ...Field) {
 }

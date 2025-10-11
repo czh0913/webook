@@ -26,7 +26,7 @@ func (s *ArticleTestSuite) SetupSuite() {
 	// 使用之前，初始化 Handler 和路由，以及文章功能所需要的 service
 	s.db = startup.InitTestDB()
 	s.server = gin.Default()
-
+	// 初始化在上下文里面放一个 claims ， 后面校验会用到
 	s.server.Use(func(ctx *gin.Context) {
 		ctx.Set("claims", &ijwt.UserClaims{
 			Uid: 123,
@@ -36,6 +36,7 @@ func (s *ArticleTestSuite) SetupSuite() {
 	artHdl.RegisterRoutes(s.server)
 }
 
+// TearDownTest 在每个测试之后执行
 func (s *ArticleTestSuite) TearDownTest() {
 	s.db.Exec("TRUNCATE TABLE articles")
 }
@@ -45,7 +46,8 @@ func (s *ArticleTestSuite) TestEdit() {
 	t := s.T()
 	testCases := []struct {
 		name string
-		art  Article
+		// 前端进来的 文章数据
+		art Article
 
 		// 准备数据，这里我能做什么 ：
 		before func(t *testing.T)
@@ -71,7 +73,7 @@ func (s *ArticleTestSuite) TestEdit() {
 				art.Utime = 0
 				// 用户id 自定义为123 ，帖子id 是1
 				assert.Equal(t, dao.Article{
-					ID:       1,
+					Id:       1,
 					Title:    "标题",
 					Content:  "内容",
 					AuthorID: 123,
@@ -87,6 +89,92 @@ func (s *ArticleTestSuite) TestEdit() {
 			wantRes: Result[int64]{
 				Data: 1,
 				Msg:  "OK",
+			},
+		},
+		{
+			name: "修改帖子",
+			before: func(t *testing.T) {
+				// 需要事先插入一个帖子
+				err := s.db.Create(dao.Article{
+					Id:       2,
+					Title:    "标题",
+					Content:  "内容",
+					AuthorID: 123,
+					Ctime:    123,
+					Utime:    234,
+				}).Error
+				assert.NoError(t, err)
+
+			},
+			after: func(t *testing.T) {
+				// 在帖子保存之后，需要检查 数据库是否存有新建的帖子
+				var art dao.Article
+				err := s.db.Where("id=?", 2).First(&art).Error
+				assert.NoError(t, err)
+
+				assert.True(t, art.Utime > 234)
+				art.Utime = 0
+				// 用户id 自定义为123 ，帖子id 是1
+				assert.Equal(t, dao.Article{
+					Id:       2,
+					Title:    "新的标题",
+					Content:  "新的内容",
+					AuthorID: 123,
+					Ctime:    123,
+					Utime:    0,
+				}, art)
+			},
+			art: Article{
+				Id:      2,
+				Title:   "新的标题",
+				Content: "新的内容",
+			},
+			wantCode: 200,
+			wantRes: Result[int64]{
+				Data: 2,
+				Msg:  "OK",
+			},
+		},
+		{
+			name: "修改他人帖子",
+			before: func(t *testing.T) {
+				// 需要事先插入一个帖子
+				err := s.db.Create(dao.Article{
+					Id:       3,
+					Title:    "标题",
+					Content:  "内容",
+					AuthorID: 789,
+					Ctime:    123,
+					Utime:    234,
+				}).Error
+				assert.NoError(t, err)
+
+			},
+			after: func(t *testing.T) {
+				// 在帖子保存之后，需要检查 数据库是否存有新建的帖子
+				var art dao.Article
+				err := s.db.Where("id=?", 3).First(&art).Error
+				assert.NoError(t, err)
+
+				// 没有变化
+				assert.Equal(t, dao.Article{
+					Id:       3,
+					Title:    "标题",
+					Content:  "内容",
+					AuthorID: 789,
+					Ctime:    123,
+					Utime:    234,
+				}, art)
+			},
+			art: Article{
+				Id:      3,
+				Title:   "新的标题",
+				Content: "新的内容",
+			},
+			wantCode: 200,
+			wantRes: Result[int64]{
+				Code: 5,
+				Msg:  "系统错误",
 			},
 		},
 	}
@@ -126,6 +214,7 @@ func TestArticle(t *testing.T) {
 }
 
 type Article struct {
+	Id      int64  `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }

@@ -1,4 +1,4 @@
-package repository
+package article
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 type ArticleRepository interface {
 	Creat(ctx context.Context, art domain.Article) (int64, error)
+	Update(ctx context.Context, art domain.Article) error
 }
 
 type CachedArticleRepository struct {
@@ -22,6 +23,15 @@ func NewCachedArticleRepository(da dao.ArticleDAO) ArticleRepository {
 
 func (c CachedArticleRepository) Creat(ctx context.Context, art domain.Article) (int64, error) {
 	return c.da.Insert(ctx, dao.Article{
+		Title:    art.Title,
+		Content:  art.Content,
+		AuthorID: art.Author.Id,
+	})
+}
+
+func (c CachedArticleRepository) Update(ctx context.Context, art domain.Article) error {
+	return c.da.UpdateByIdWithAuthor(ctx, dao.Article{
+		Id:       art.Id,
 		Title:    art.Title,
 		Content:  art.Content,
 		AuthorID: art.Author.Id,
